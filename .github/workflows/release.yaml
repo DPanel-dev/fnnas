@@ -39,8 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.ref_name }}
-          files: |
-            dpanel-amd64.fpk
+          path: ./**
           if-no-files-found: error
   sync-to-dpanel-release:
     runs-on: ubuntu-latest
