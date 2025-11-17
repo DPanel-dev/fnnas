@@ -1,0 +1,22 @@
+{
+  "data-share": {
+    "shares": [
+      {
+        "name": "dpanel",
+        "permission": {
+          "rw": [
+            "dpanel"
+          ]
+        }
+      },
+      {
+        "name": "dpanel/data",
+        "permission": {
+          "rw": [
+            "dpanel"
+          ]
+        }
+      }
+    ]
+  }
+}

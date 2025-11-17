@@ -1,0 +1,13 @@
+{
+    ".url": {
+        "dpanel.Application": {
+            "title": "DPanel",
+            "icon": "images/icon_{0}.png",
+            "type": "url",
+            "protocol": "http",
+            "port": "8086",
+            "url": "/dpanel/ui",
+            "allUsers": false
+        }
+    }
+}

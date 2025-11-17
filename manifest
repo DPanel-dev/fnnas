@@ -1,0 +1,19 @@
+appname               = dpanel
+version               = 1.9.1
+display_name          = DPanel
+desc                  = <p><strong>DPanel</strong> 是一款轻量化的管理 Docker、Podman 容器的可视化面板。<a href="https://dpanel.cc/README" target="_blank">👉👉👉 更多功能介绍</a></p><h3>交流群</h3><img src="https://cdn.w7.cc/dpanel/qq.png" width="300" alt="QQ交流群二维码" /><h3>界面预览</h3><p><img src="https://cdn.w7.cc/dpanel/home.png?t=1" alt="首页界面"  width="500"></p><p><img src="https://cdn.w7.cc/dpanel/app-list.png?t=1"  width="500" alt="容器管理界面"></p><p><img  width="500" src="https://cdn.w7.cc/dpanel/app-file.png?t=1" alt="文件管理界面"></p><p><img src="https://cdn.w7.cc/dpanel/image-list.png?t=1"  width="500" alt="镜像管理界面"></p><p><img  width="500" src="https://cdn.w7.cc/dpanel/compose-deploy.png?t=1" alt="部署 Compose 界面"></p>
+arch                  = x86_64
+source                = thirdparty
+
+maintainer            = DPanel
+maintainer_url        = https://dpanle.cc
+distributor           = DPanel
+distributor_url       = https://dpanle.cc
+
+os_min_version        = 0.9.0
+
+desktop_uidir         = ui
+desktop_applaunchname = dpanel.Application
+
+service_port          = 8086
+checkport             = true
