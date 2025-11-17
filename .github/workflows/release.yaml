@@ -26,8 +26,8 @@ jobs:
           mkdir -p app/server
           cp dpanel-amd64 app/server/dpanel-amd64
           fnpack build
-          mv dpanel.fpm dpanel-amd64.fpk
-          
+          mv dpanel.fpk dpanel-amd64.fpk
+
       - name: Upload Release
         uses: softprops/action-gh-release@v2
         with:
