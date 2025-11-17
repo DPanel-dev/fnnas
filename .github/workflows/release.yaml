@@ -1,0 +1,31 @@
+name: release
+permissions: write-all
+on:
+  push:
+    tags:
+      - 'v*'  # 触发条件：推送到任意 v* 标签
+
+jobs:
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Download fnpack
+      run: |
+        curl -L -o /usr/local/bin/fnpack https://github.com/donknap/dpanel/releases/download/docker-cli-v1/fnpack
+        chmod +x /usr/local/bin/fnpack
+        curl -L https://github.com/donknap/dpanel/releases/download/${env:GITHUB_REF_NAME}/dpanel-amd64
+        cp dpanel-amd64 app/server/dpanel-amd64
+
+    - name: Build fpk
+      run: |
+        fnpack build
+
+    - name: Upload Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        files: |
+            dpanel-amd64.fpk
+        prerelease: false
