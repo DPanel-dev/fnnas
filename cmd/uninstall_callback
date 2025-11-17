@@ -1,5 +1,25 @@
 #!/bin/bash
 
-### This script is called after the user uninstalls the application.
+LOG_FILE="${TRIM_PKGVAR}/info.log"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
+}
+
+if [ "${ammds_data_action}" = "delete" ]; then
+    log_msg "Delete path: ${TRIM_PKGVAR}"
+    rm -rf "${TRIM_PKGVAR}"
+    
+    if [ -n "${TRIM_DATA_SHARE_PATHS}" ]; then
+        IFS=':' read -ra SHARE_PATHS <<< "${TRIM_DATA_SHARE_PATHS}"
+        for path in "${SHARE_PATHS[@]}"; do
+          log_msg "Delete share path: $path"
+            if [ -n "$path" ] && [ -d "$path" ]; then
+                rm -rf "$path"
+            fi
+        done
+    fi
+fi
 
 exit 0

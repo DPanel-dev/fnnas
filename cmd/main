@@ -3,23 +3,25 @@
 LOG_FILE="${TRIM_PKGVAR}/info.log"
 PID_FILE="${TRIM_PKGVAR}/app.pid"
 
+DP_STORAGE_LOCAL_PATH=$(echo $TRIM_DATA_SHARE_PATHS | cut -d: -f2)
+
 # write the command to start your program here 
-CMD=""
+CMD="${TRIM_APPDEST}/server/dpanel-amd64 \
+      -e APP_SERVER_PORT=${DP_APP_SERVER_PORT} \
+      -e STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH}"
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
 }
 
 start_process() {
-
     log_msg "============== Debug Info =============="
     log_msg "[Sys] ID: ${TRIM_SYS_MACHINE_ID:--}"
-    log_msg "[Sys] 用户: ${TRIM_RUN_USERNAME:--}:${TRIM_RUN_GROUPNAME:--}"
+    log_msg "[Sys] 用户: ${TRIM_RUN_USERNAME:--}:${TRIM_RUN_GROUPNAME:--} (${TRIM_RUN_UID:--}:${TRIM_RUN_GID:--})"
     log_msg "[Sys] 版本: ${TRIM_SYS_VERSION:--}"
     log_msg "[Sys] 架构: ${TRIM_SYS_ARCH:--}"
     log_msg "[Sys] 内核: ${TRIM_KERNEL_VERSION:--}"
     log_msg "[Sys] 语言: ${TRIM_SYS_LANGUAGE:--}"
-    log_msg "[Sys] 用户: ${TRIM_RUN_USERNAME:--} (UID: ${TRIM_RUN_UID:--})"
     log_msg "[Sys] 动态数据: ${TRIM_PKGVAR:--}"
     log_msg "[Sys] 临时文件: ${TRIM_PKGTMP:--}"
     log_msg "[Sys] 用户数据: ${TRIM_PKGHOME:--}"
@@ -29,7 +31,7 @@ start_process() {
     log_msg "[Sys] 安装临时: ${TRIM_PKGINST_TEMP_DIR:--}"
     log_msg "[Sys] FPK解压: ${TRIM_TEMP_TPKFILE:--}"
     log_msg "===================================="
-    log_msg "[App] 用户: ${TRIM_USERNAME:--} (UID: ${TRIM_UID:--})"
+    log_msg "[App] 用户: ${TRIM_USERNAME:--}:${TRIM_GROUPNAME:--} (${TRIM_UID:--}:${TRIM_GID:--})"
     log_msg "[App] 名称: ${TRIM_APPNAME:--}"
     log_msg "[App] 版本: ${TRIM_APPVER:--}"
     log_msg "[App] 状态: ${TRIM_APP_STATUS:--}"
@@ -39,18 +41,24 @@ start_process() {
     log_msg "[App] 存储空间: ${TRIM_APPDEST_VOL:--}"
     log_msg "[App] 共享目录: ${TRIM_DATA_SHARE_PATHS:--}"
 
-
     if status; then
         return 0
     fi
 
     log_msg "Starting process ..."
     # run cmd to start process
-    bash -c "${CMD}" >> ${LOG_FILE} 2>&1 &
+    export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+    bash -c "${CMD} server:start" >> ${LOG_FILE} 2>&1 &
     # write pid to pidfile
     printf "%s" "$!" > ${PID_FILE}
-    # log_msg "CMD = ${CMD}"
-    # log_msg "pid = $!"
+    log_msg "CMD = ${CMD}"
+    log_msg "pid = $!"
+
+    if [ -n "${DP_INIT_USERNAME}" ] && [ -n "${DP_INIT_PASSWORD}" ]; then
+        log_msg "Init user ..."
+        bash -c "${CMD} user:reset --username ${DP_INIT_USERNAME} --password ${DP_INIT_PASSWORD}" >> ${LOG_FILE} 2>&1 &
+    fi
+
     return 0
 }
 
