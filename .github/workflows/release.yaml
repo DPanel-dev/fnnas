@@ -25,6 +25,10 @@ jobs:
           curl -L -o dpanel-amd64 https://github.com/donknap/dpanel/releases/download/${GITHUB_REF_NAME}/dpanel-ce-gnu-amd64 
           mkdir -p app/server
           cp dpanel-amd64 app/server/dpanel-amd64
+
+          VERSION_TAG=${GITHUB_REF_NAME#v}
+          sed -i "s/1.9.1/$VERSION_TAG/g" manifest
+
           fnpack build
           mv dpanel.fpk dpanel-amd64.fpk
 
