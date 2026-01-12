@@ -94,7 +94,7 @@ jobs:
           echo "✅ 已更新 dpanel.fpk"
 
           # --- 修改版本号与历史记录 (使用 jq 解析) ---
-          JSON_FILE="${TARGET_DIR}/fnpack.json"
+          JSON_FILE="${REPO_DIR}/fnpack.json"
 
           if [ -f "$JSON_FILE" ]; then
             # 使用 jq 进行处理：
