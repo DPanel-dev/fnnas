@@ -70,12 +70,8 @@ jobs:
           GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          # --- 0. 环境检查 ---
-          echo "📂 检查下载目录内容:"
-          ls -R ./download
-          
-          # --- 1. 上传到当前仓库 Release (原有逻辑) ---
-          echo "📤 开始上传文件到 donknap/dpanel Release..."
+          # --- 1. 上传到当前仓库 Release ---
+          echo "📤 上传文件到 donknap/dpanel Release..."
           for filepath in ./download/*; do
             if [ -f "$filepath" ]; then
               filename=$(basename "$filepath")
@@ -85,31 +81,30 @@ jobs:
           done
 
           # --- 2. 同步到 FnDepot 仓库 ---
-          echo "🚀 开始同步到 DPanel-dev/FnDepot..."
+          echo "🚀 同步到 DPanel-dev/FnDepot..."
           
-          # 配置 Git 身份
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           # 克隆目标仓库
           git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git fndepot_repo
           
-          # 定义路径 (根据你的说明，源文件是 ./download/fnpack-amd64)
-          SOURCE_FILE="./download/fnpack-amd64"
+          # 【修正点】：根据日志，源文件名为 dpanel-amd64.fpk
+          SOURCE_FILE="./download/dpanel-amd64.fpk"
           TARGET_DIR="fndepot_repo/dpanel"
 
           if [ ! -f "$SOURCE_FILE" ]; then
-            echo "❌ 错误: 找不到文件 $SOURCE_FILE"
-            # 如果还是找不到，尝试在子目录寻找（预防 artifact 插件多包了一层）
-            SOURCE_FILE=$(find ./download -name "fnpack-amd64" | head -n 1)
-            if [ -z "$SOURCE_FILE" ]; then exit 1; fi
-            echo "🔍 在子目录找到了文件: $SOURCE_FILE"
+            echo "❌ 错误: 依旧找不到文件 $SOURCE_FILE"
+            echo "当前目录内容如下:"
+            ls -R ./download
+            exit 1
           fi
 
-          # 执行拷贝和重命名
+          # 复制并重命名
           mkdir -p "$TARGET_DIR"
           cp "$SOURCE_FILE" "$TARGET_DIR/dpanel.fpk"
-          
+          echo "✅ 已将 $SOURCE_FILE 复制为 $TARGET_DIR/dpanel.fpk"
+
           # 修改版本号 (1.9.3 -> TAG_NAME)
           JSON_FILE="$TARGET_DIR/fnpack.json"
           if [ -f "$JSON_FILE" ]; then
@@ -124,9 +119,9 @@ jobs:
           cd fndepot_repo
           git add .
           if git diff --staged --quiet; then
-            echo "ℹ️ 没有变化，跳过推送"
+            echo "ℹ️ 内容无变化"
           else
-            git commit -m "chore: update dpanel binary and version to $TAG_NAME"
+            git commit -m "chore: update dpanel binary to $TAG_NAME"
             git push origin main
-            echo "✅ 成功同步到 FnDepot 仓库"
+            echo "✅ 成功推送到 FnDepot"
           fi
