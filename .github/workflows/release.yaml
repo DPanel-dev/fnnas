@@ -53,30 +53,26 @@ jobs:
     steps:
       - name: Setup Workspace
         run: |
-          mkdir -p ./downloaded
+          mkdir -p ./download
           echo "📁 Created clean directory for artifact"
+
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
           name: ${{ github.ref_name }}
           path: ./download
+
       - name: Install GitHub CLI
         run: |
           sudo apt-get update
           sudo apt-get install -y gh
       - name: Upload to donknap/dpanel Release
         env:
-          GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}  # 必须是 PAT，有 donknap/dpanel 写权限
+          GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
           ARTIFACT_DIR="download"
-          
-          if [ ! -d "$ARTIFACT_DIR" ]; then
-            echo "❌ Directory '$ARTIFACT_DIR' not found!"
-            exit 1
-          fi
-
-          if [ -z "$(ls -A $ARTIFACT_DIR)" ]; then
-            echo "❌ No files found in '$ARTIFACT_DIR'!"
+          if [ ! -d "$ARTIFACT_DIR" ] || [ -z "$(ls -A $ARTIFACT_DIR)" ]; then
+            echo "❌ Directory or files not found!"
             exit 1
           fi
 
@@ -87,12 +83,58 @@ jobs:
           for filepath in "$ARTIFACT_DIR"/*; do
             if [ -f "$filepath" ]; then
               filename=$(basename "$filepath")
-              echo "⬆️ Uploading: $filename"
               gh release upload "$TAG_NAME" "$filepath" \
                 --repo donknap/dpanel \
-                --clobber \
-                || (echo "❌ Failed to upload $filename" && exit 1)
+                --clobber || exit 1
             fi
           done
 
-          echo "✅ All files uploaded successfully to donknap/dpanel@$TAG_NAME"
+      # --- 新增：同步到 FnDepot 仓库 ---
+      - name: Sync to FnDepot Repository
+        env:
+          GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          # 1. 配置 Git 身份
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 2. 克隆 FnDepot 仓库
+          git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git fndepot_repo
+          
+          # 3. 复制并重命名执行文件
+          # 假设 download 目录下生成的文件名为 dpanel-amd64
+          SOURCE_FILE="download/dpanel-amd64"
+          TARGET_DIR="fndepot_repo/dpanel"
+          
+          if [ -f "$SOURCE_FILE" ]; then
+            mkdir -p "$TARGET_DIR"
+            cp "$SOURCE_FILE" "$TARGET_DIR/dpanel.fpk"
+            echo "✅ File copied to $TARGET_DIR/dpanel.fpk"
+          else
+            echo "❌ Source file $SOURCE_FILE not found! Please check artifact name."
+            exit 1
+          fi
+
+          # 4. 修改 fnpack.json 中的版本号
+          # 将 "1.9.3" 替换为当前的 TAG_NAME
+          JSON_PATH="$TARGET_DIR/fnpack.json"
+          if [ -f "$JSON_PATH" ]; then
+            # 更加精确的替换，匹配 "version": "1.9.3" 结构
+            sed -i "s/\"1.9.3\"/\"$TAG_NAME\"/g" "$JSON_PATH"
+            echo "✅ Updated $JSON_PATH version to $TAG_NAME"
+          else
+            echo "❌ $JSON_PATH not found!"
+            exit 1
+          fi
+
+          # 5. 提交并推送更改
+          cd fndepot_repo
+          git add .
+          if git diff --staged --quiet; then
+            echo "ℹ️ No changes detected in FnDepot."
+          else
+            git commit -m "chore: update dpanel.fpk and version to $TAG_NAME"
+            git push origin main
+            echo "🚀 Successfully synced to DPanel-dev/FnDepot"
+          fi
