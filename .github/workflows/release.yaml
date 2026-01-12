@@ -93,11 +93,21 @@ jobs:
           cp "./download/dpanel-amd64.fpk" "${REPO_DIR}/dpanel/dpanel.fpk"
           echo "✅ 已更新 dpanel.fpk"
 
-          # 修改版本号 (1.9.3 -> VERSION_TAG)
-          JSON_FILE="${REPO_DIR}/fnpack.json"
+          # --- 修改版本号与历史记录 (使用 jq 解析) ---
+          JSON_FILE="${TARGET_DIR}/fnpack.json"
+
           if [ -f "$JSON_FILE" ]; then
-            sed -i "s/1.9.3/$VERSION_TAG/g" "$JSON_FILE"
-            echo "✅ 已更新 fnpack.json 版本为 $VERSION_TAG"
+            # 使用 jq 进行处理：
+            # 1. 修改 .dpanel.version
+            # 2. 修改 .dpanel.history，添加以变量为 Key 的新项
+            # 注意：这里我们使用 --arg 传参，避免转义问题
+            
+            jq --arg TAG "$TAG_NAME" \
+              --arg DESC "更新日志: https://github.com/donknap/dpanel/releases/tag/$TAG_NAME" \
+              '.dpanel.version = $TAG | .dpanel.history += { ($TAG): $DESC }' \
+              "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
+
+            echo "✅ 已成功解析并更新 $JSON_FILE"
           else
             echo "❌ 错误: 找不到 $JSON_FILE"
             exit 1
