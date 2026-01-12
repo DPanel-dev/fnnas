@@ -70,6 +70,7 @@ jobs:
           GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
+          VERSION_TAG=${GITHUB_REF_NAME#v}
           # --- 1. 上传到当前仓库 Release ---
           echo "📤 上传文件到 donknap/dpanel Release..."
           for filepath in ./download/*; do
@@ -92,11 +93,11 @@ jobs:
           cp "./download/dpanel-amd64.fpk" "${REPO_DIR}/dpanel/dpanel.fpk"
           echo "✅ 已更新 dpanel.fpk"
 
-          # 修改版本号 (1.9.3 -> TAG_NAME)
+          # 修改版本号 (1.9.3 -> VERSION_TAG)
           JSON_FILE="${REPO_DIR}/fnpack.json"
           if [ -f "$JSON_FILE" ]; then
-            sed -i "s/1.9.3/$TAG_NAME/g" "$JSON_FILE"
-            echo "✅ 已更新 fnpack.json 版本为 $TAG_NAME"
+            sed -i "s/1.9.3/$VERSION_TAG/g" "$JSON_FILE"
+            echo "✅ 已更新 fnpack.json 版本为 $VERSION_TAG"
           else
             echo "❌ 错误: 找不到 $JSON_FILE"
             exit 1
