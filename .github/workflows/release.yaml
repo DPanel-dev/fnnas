@@ -52,9 +52,7 @@ jobs:
       contents: write
     steps:
       - name: Setup Workspace
-        run: |
-          mkdir -p ./download
-          echo "📁 Created clean directory for artifact"
+        run: mkdir -p ./download
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -66,68 +64,69 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gh
-      - name: Upload to donknap/dpanel Release
-        env:
-          GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
-        run: |
-          TAG_NAME="${{ github.ref_name }}"
-          ARTIFACT_DIR="download"
-          
-          echo "📤 Uploading files to donknap/dpanel Release: $TAG_NAME"
 
-          for filepath in "$ARTIFACT_DIR"/*; do
-            if [ -f "$filepath" ]; then
-              filename=$(basename "$filepath")
-              echo "⬆️ Uploading: $filename"
-              gh release upload "$TAG_NAME" "$filepath" \
-                --repo donknap/dpanel \
-                --clobber || exit 1
-            fi
-          done
-
-      # 操作 2：新增同步到 FnDepot 仓库的逻辑
-      - name: Sync fnpack-amd64 to FnDepot Repository
+      - name: Release and Sync to FnDepot
         env:
           GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          # 1. 配置 Git 身份
+          # --- 0. 环境检查 ---
+          echo "📂 检查下载目录内容:"
+          ls -R ./download
+          
+          # --- 1. 上传到当前仓库 Release (原有逻辑) ---
+          echo "📤 开始上传文件到 donknap/dpanel Release..."
+          for filepath in ./download/*; do
+            if [ -f "$filepath" ]; then
+              filename=$(basename "$filepath")
+              echo "⬆️ 上传中: $filename"
+              gh release upload "$TAG_NAME" "$filepath" --repo donknap/dpanel --clobber
+            fi
+          done
+
+          # --- 2. 同步到 FnDepot 仓库 ---
+          echo "🚀 开始同步到 DPanel-dev/FnDepot..."
+          
+          # 配置 Git 身份
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 2. 克隆 FnDepot 仓库
+          # 克隆目标仓库
           git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git fndepot_repo
           
-          # 3. 复制并重命名文件 (确认为 fnpack-amd64 -> dpanel/dpanel.fpk)
-          SOURCE_FILE="download/fnpack-amd64"
+          # 定义路径 (根据你的说明，源文件是 ./download/fnpack-amd64)
+          SOURCE_FILE="./download/fnpack-amd64"
           TARGET_DIR="fndepot_repo/dpanel"
-          
-          if [ -f "$SOURCE_FILE" ]; then
-            mkdir -p "$TARGET_DIR"
-            cp "$SOURCE_FILE" "$TARGET_DIR/dpanel.fpk"
-            echo "✅ Copied $SOURCE_FILE to $TARGET_DIR/dpanel.fpk"
-          else
-            echo "❌ Error: $SOURCE_FILE not found!"
-            exit 1
+
+          if [ ! -f "$SOURCE_FILE" ]; then
+            echo "❌ 错误: 找不到文件 $SOURCE_FILE"
+            # 如果还是找不到，尝试在子目录寻找（预防 artifact 插件多包了一层）
+            SOURCE_FILE=$(find ./download -name "fnpack-amd64" | head -n 1)
+            if [ -z "$SOURCE_FILE" ]; then exit 1; fi
+            echo "🔍 在子目录找到了文件: $SOURCE_FILE"
           fi
 
-          # 4. 修改 fnpack.json 里的版本号 (1.9.3 -> TAG_NAME)
+          # 执行拷贝和重命名
+          mkdir -p "$TARGET_DIR"
+          cp "$SOURCE_FILE" "$TARGET_DIR/dpanel.fpk"
+          
+          # 修改版本号 (1.9.3 -> TAG_NAME)
           JSON_FILE="$TARGET_DIR/fnpack.json"
           if [ -f "$JSON_FILE" ]; then
             sed -i "s/1.9.3/$TAG_NAME/g" "$JSON_FILE"
-            echo "✅ Updated version in $JSON_FILE to $TAG_NAME"
+            echo "✅ 已更新 fnpack.json 版本为 $TAG_NAME"
           else
-            echo "❌ Error: $JSON_FILE not found!"
+            echo "❌ 错误: 找不到 $JSON_FILE"
             exit 1
           fi
 
-          # 5. 提交并推送
+          # 提交推送
           cd fndepot_repo
           git add .
           if git diff --staged --quiet; then
-            echo "ℹ️ No changes to commit in FnDepot."
+            echo "ℹ️ 没有变化，跳过推送"
           else
-            git commit -m "chore: sync dpanel binary and update version to $TAG_NAME"
+            git commit -m "chore: update dpanel binary and version to $TAG_NAME"
             git push origin main
-            echo "🚀 Successfully pushed to DPanel-dev/FnDepot"
+            echo "✅ 成功同步到 FnDepot 仓库"
           fi
