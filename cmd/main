@@ -6,7 +6,7 @@ PID_FILE="${TRIM_PKGVAR}/app.pid"
 DP_STORAGE_LOCAL_PATH=$(echo $TRIM_DATA_SHARE_PATHS | cut -d: -f2)
 
 # write the command to start your program here 
-CMD="${TRIM_APPDEST}/server/dpanel-amd64 \
+CMD="${TRIM_APPDEST}/server/dpanel \
       -e APP_SERVER_PORT=${DP_APP_SERVER_PORT} \
       -e STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH}"
 
