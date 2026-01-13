@@ -30,7 +30,7 @@ jobs:
           cp dpanel-amd64 app/server/dpanel
 
           sed -i "s/#version/$VERSION_TAG/g" manifest
-          sed -i "s/#os_min_version/1.8.1/g" manifest
+          sed -i "s/#os_min_version/1.1.8/g" manifest
           sed -i "s/#platform/x86/g" manifest
 
           fnpack build
