@@ -50,12 +50,15 @@ start_process() {
     export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
     bash -c "${CMD} server:start" >> ${LOG_FILE} 2>&1 &
     # write pid to pidfile
-    printf "%s" "$!" > ${PID_FILE}
+    PID=$!
+    printf "%s" "$PID" > ${PID_FILE}
     log_msg "CMD = ${CMD}"
-    log_msg "pid = $!"
+    log_msg "pid = $PID"
 
     if [ -n "${DP_INIT_USERNAME}" ] && [ -n "${DP_INIT_PASSWORD}" ]; then
         log_msg "Init user ..."
+        // 这里等待一下，主程序启动后再初始化用户
+        wait $PID
         bash -c "${CMD} user:reset --username ${DP_INIT_USERNAME} --password ${DP_INIT_PASSWORD}" >> ${LOG_FILE} 2>&1 &
     fi
 
