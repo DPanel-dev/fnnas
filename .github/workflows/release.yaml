@@ -14,7 +14,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Pack
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
@@ -35,6 +34,7 @@ jobs:
           mv dpanel.fpk dpanel-amd64.fpk
 
           # arm64 
+          git checkout manifest
           curl -L -o dpanel-arm64 https://github.com/donknap/dpanel/releases/download/${GITHUB_REF_NAME}/dpanel-ce-gnu-arm64 
           mkdir -p app/server
           cp dpanel-arm64 app/server/dpanel
