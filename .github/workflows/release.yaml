@@ -35,12 +35,14 @@ jobs:
 
           # arm64 
           git checkout manifest
+          
           curl -L -o dpanel-arm64 https://github.com/donknap/dpanel/releases/download/${GITHUB_REF_NAME}/dpanel-ce-gnu-arm64 
           mkdir -p app/server
           cp dpanel-arm64 app/server/dpanel
 
+          sed -i "s/#version/$VERSION_TAG/g" manifest
           sed -i "s/#os_min_version/1.0.0/g" manifest
-
+          
           fnpack build
           mv dpanel.fpk dpanel-arm64.fpk
 
