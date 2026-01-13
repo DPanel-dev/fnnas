@@ -18,6 +18,9 @@ jobs:
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
+          VERSION_TAG=${GITHUB_REF_NAME#v}
+          VERSION_TAG=${VERSION_TAG%.*}-${VERSION_TAG##*.}
+
           curl -L -o /usr/local/bin/fnpack https://github.com/donknap/dpanel/releases/download/docker-cli-v1/fnpack
           chmod +x /usr/local/bin/fnpack
 
@@ -26,9 +29,9 @@ jobs:
           mkdir -p app/server
           cp dpanel-amd64 app/server/dpanel
 
-          VERSION_TAG=${GITHUB_REF_NAME#v}
           sed -i "s/#version/$VERSION_TAG/g" manifest
           sed -i "s/#os_min_version/1.8.1/g" manifest
+          sed -i "s/#platform/x86/g" manifest
 
           fnpack build
           mv dpanel.fpk dpanel-amd64.fpk
@@ -42,7 +45,8 @@ jobs:
 
           sed -i "s/#version/$VERSION_TAG/g" manifest
           sed -i "s/#os_min_version/1.0.0/g" manifest
-          
+          sed -i "s/#platform/arm/g" manifest
+
           fnpack build
           mv dpanel.fpk dpanel-arm64.fpk
 
