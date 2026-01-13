@@ -6,14 +6,11 @@ arch                  = x86_64
 source                = thirdparty
 
 maintainer            = DPanel
-maintainer_url        = https://dpanle.cc
+maintainer_url        = https://dpanel.cc
 distributor           = DPanel
-distributor_url       = https://dpanle.cc
+distributor_url       = https://dpanel.cc
 
-os_min_version        = 0.9.0
+os_min_version        = 1.1.8
 
 desktop_uidir         = ui
 desktop_applaunchname = dpanel.Application
-
-service_port          = 8086
-checkport             = true
