@@ -5,9 +5,9 @@ desc                  = <p><strong>DPanel</strong> 是一款轻量化的管理 D
 platform              = #platform
 source                = thirdparty
 
-maintainer            = DPanel
-maintainer_url        = https://dpanel.cc
-distributor           = DPanel
+maintainer            = DPanel-dev
+maintainer_url        = https://github.com/DPanel-dev
+distributor           = DPanel-dev
 distributor_url       = https://dpanel.cc
 
 os_min_version        = #os_min_version
