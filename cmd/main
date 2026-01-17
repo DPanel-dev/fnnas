@@ -3,7 +3,7 @@
 LOG_FILE="${TRIM_PKGVAR}/info.log"
 PID_FILE="${TRIM_PKGVAR}/app.pid"
 
-DP_STORAGE_LOCAL_PATH=$(echo $TRIM_DATA_SHARE_PATHS | cut -d: -f2)
+DP_STORAGE_LOCAL_PATH=$TRIM_PKGHOME
 
 # write the command to start your program here 
 CMD="${TRIM_APPDEST}/server/dpanel \
