@@ -60,13 +60,11 @@
             "label": "当前窗口打开",
             "value": "iframe"
           }
-        ],
-        "rules": [
-          {
-            "required": true,
-            "message": "请选择面板页面以哪种方式打开"
-          }
         ]
+      },
+      {
+        "type": "tips",
+        "helpText": "请选择面板页面的打开方式"
       },
       {
         "field": "DP_INIT_USERNAME",
