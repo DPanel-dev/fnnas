@@ -47,26 +47,6 @@
         "helpText": "配置应用的启动端口，请避免与其它应用冲突"
       },
       {
-        "type": "radio",
-        "field": "DP_APP_OPEN_TYPE",
-        "label": "页面打开方式",
-        "initValue": "url",
-        "options": [
-          {
-            "label": "新窗口打开",
-            "value": "url"
-          },
-          {
-            "label": "当前窗口打开",
-            "value": "iframe"
-          }
-        ]
-      },
-      {
-        "type": "tips",
-        "helpText": "请选择面板页面的打开方式"
-      },
-      {
         "field": "DP_INIT_USERNAME",
         "initValue": "admin",
         "label": "管理员用户名",

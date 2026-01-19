@@ -3,7 +3,7 @@
         "dpanel.Application": {
             "title": "DPanel",
             "icon": "images/icon_{0}.png",
-            "type": "${DP_APP_OPEN_TYPE}",
+            "type": "url",
             "protocol": "http",
             "port": "${DP_APP_SERVER_PORT}",
             "url": "/dpanel/ui",
