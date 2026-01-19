@@ -44,7 +44,29 @@
       },
       {
         "type": "tips",
-        "helpText": "配置应用的启动端口"
+        "helpText": "配置应用的启动端口，请避免与其它应用冲突"
+      },
+      {
+        "type": "radio",
+        "field": "DP_APP_OPEN_TYPE",
+        "label": "页面打开方式",
+        "initValue": "url",
+        "options": [
+          {
+            "label": "新窗口打开",
+            "value": "url"
+          },
+          {
+            "label": "当前窗口打开",
+            "value": "iframe"
+          }
+        ],
+        "rules": [
+          {
+            "required": true,
+            "message": "请选择面板页面以哪种方式打开"
+          }
+        ]
       },
       {
         "field": "DP_INIT_USERNAME",
