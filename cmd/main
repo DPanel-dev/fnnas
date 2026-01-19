@@ -1,9 +1,10 @@
 #!/bin/bash
 
-LOG_FILE="${TRIM_PKGVAR}/info.log"
+DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"
+LOG_FILE="${DATA_DIR}/run.log"
 PID_FILE="${TRIM_PKGVAR}/app.pid"
 
-DP_STORAGE_LOCAL_PATH=$TRIM_PKGHOME
+DP_STORAGE_LOCAL_PATH="${DATA_DIR}/data"
 
 # write the command to start your program here 
 CMD="${TRIM_APPDEST}/server/dpanel \
