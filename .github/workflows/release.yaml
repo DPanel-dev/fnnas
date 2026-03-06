@@ -71,6 +71,7 @@ jobs:
           echo "📤 上传文件到 donknap/dpanel Release..."
           gh release upload "$TAG_NAME" dpanel-amd64.fpk dpanel-arm64.fpk --repo donknap/dpanel --clobber
 
+          VERSION_TAG=${TAG_NAME%.*}-${TAG_NAME##*.}
           # --- 获取 Release Body (Changelog) ---
           echo "📄 获取 Release 更新日志..."
           # 使用 gh 命令行工具获取 release 描述，如果获取失败则提供默认文本
@@ -94,7 +95,7 @@ jobs:
           JSON_FILE="${REPO_DIR}/fnpack.json"
 
           if [ -f "$JSON_FILE" ]; then
-            jq --arg TAG "$TAG_NAME" \
+            jq --arg TAG "$VERSION_TAG" \
                --arg SIZE "$SIZE_MB" \
                --arg CHANGELOG "$CHANGELOG_CONTENT" \
                '.dpanel.version = $TAG | 
