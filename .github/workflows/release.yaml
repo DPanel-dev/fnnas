@@ -95,10 +95,11 @@ jobs:
           JSON_FILE="${REPO_DIR}/fnpack.json"
 
           if [ -f "$JSON_FILE" ]; then
-            jq --arg TAG "$VERSION_TAG" \
+            jq --arg TAG "$TAG_NAME" \
                --arg SIZE "$SIZE_MB" \
+               --arg VERSION "$VERSION_TAG" \
                --arg CHANGELOG "$CHANGELOG_CONTENT" \
-               '.dpanel.version = $TAG | 
+               '.dpanel.version = $VERSION | 
                 .dpanel.size = $SIZE | 
                 .dpanel.changelog = $CHANGELOG | 
                 .dpanel.arch_diff.x86.download_url = "https://github.com/donknap/dpanel/releases/download/\($TAG)/dpanel-amd64.fpk" | 
