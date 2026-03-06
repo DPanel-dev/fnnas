@@ -71,6 +71,11 @@ jobs:
           echo "📤 上传文件到 donknap/dpanel Release..."
           gh release upload "$TAG_NAME" dpanel-amd64.fpk dpanel-arm64.fpk --repo donknap/dpanel --clobber
 
+          # --- 获取 Release Body (Changelog) ---
+          echo "📄 获取 Release 更新日志..."
+          # 使用 gh 命令行工具获取 release 描述，如果获取失败则提供默认文本
+          CHANGELOG_CONTENT=$(gh release view "$TAG_NAME" --repo donknap/dpanel --json body -q .body || echo "暂无更新日志")
+
           # --- 计算包体积 (MB) ---
           # 获取 amd64 包的体积作为基准大小
           SIZE_MB=$(du -m dpanel-amd64.fpk | cut -f1)
@@ -85,20 +90,20 @@ jobs:
           REPO_DIR="./fndepot_repo"
           git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git ${REPO_DIR}
           
-          # 直接从当前目录 cp 过去
+          # 拷贝文件，注意目标文件名按你的新规则已修改为 _x86 和 _arm
           cp "dpanel-amd64.fpk" "${REPO_DIR}/dpanel/dpanel_x86.fpk"
           cp "dpanel-arm64.fpk" "${REPO_DIR}/dpanel/dpanel_arm.fpk"
 
-          echo "✅ 已更新 dpanel.fpk"
+          echo "✅ 已更新 dpanel 二进制包"
 
-          # --- 修改版本号、历史记录及文件大小 ---
+          # --- 修改版本号、大小及 changelog ---
           JSON_FILE="${REPO_DIR}/fnpack.json"
 
           if [ -f "$JSON_FILE" ]; then
             jq --arg TAG "$TAG_NAME" \
-               --arg DESC "更新日志: https://github.com/donknap/dpanel/releases/tag/$TAG_NAME" \
                --arg SIZE "$SIZE_MB" \
-               '.dpanel.version = $TAG | .dpanel.history += { ($TAG): $DESC } | .dpanel.size = $SIZE' \
+               --arg CHANGELOG "$CHANGELOG_CONTENT" \
+               '.dpanel.version = $TAG | .dpanel.size = $SIZE | .dpanel.changelog = $CHANGELOG' \
                "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
             echo "✅ 已成功解析并更新 $JSON_FILE"
           else
