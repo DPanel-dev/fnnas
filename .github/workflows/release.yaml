@@ -89,21 +89,19 @@ jobs:
 
           REPO_DIR="./fndepot_repo"
           git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git ${REPO_DIR}
-          
-          # 拷贝文件，注意目标文件名按你的新规则已修改为 _x86 和 _arm
-          cp "dpanel-amd64.fpk" "${REPO_DIR}/dpanel/dpanel_x86.fpk"
-          cp "dpanel-arm64.fpk" "${REPO_DIR}/dpanel/dpanel_arm.fpk"
 
-          echo "✅ 已更新 dpanel 二进制包"
-
-          # --- 修改版本号、大小及 changelog ---
+          # --- 修改版本号、大小、changelog 及 arch_diff 下载地址 ---
           JSON_FILE="${REPO_DIR}/fnpack.json"
 
           if [ -f "$JSON_FILE" ]; then
             jq --arg TAG "$TAG_NAME" \
                --arg SIZE "$SIZE_MB" \
                --arg CHANGELOG "$CHANGELOG_CONTENT" \
-               '.dpanel.version = $TAG | .dpanel.size = $SIZE | .dpanel.changelog = $CHANGELOG' \
+               '.dpanel.version = $TAG | 
+                .dpanel.size = $SIZE | 
+                .dpanel.changelog = $CHANGELOG | 
+                .dpanel.arch_diff.x86.download_url = "https://github.com/donknap/dpanel/releases/download/\($TAG)/dpanel-amd64.fpk" | 
+                .dpanel.arch_diff.arm.download_url = "https://github.com/donknap/dpanel/releases/download/\($TAG)/dpanel-arm64.fpk"' \
                "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
             echo "✅ 已成功解析并更新 $JSON_FILE"
           else
