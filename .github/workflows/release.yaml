@@ -71,6 +71,12 @@ jobs:
           echo "📤 上传文件到 donknap/dpanel Release..."
           gh release upload "$TAG_NAME" dpanel-amd64.fpk dpanel-arm64.fpk --repo donknap/dpanel --clobber
 
+          # --- 计算包体积 (MB) ---
+          # 获取 amd64 包的体积作为基准大小
+          SIZE_MB=$(du -m dpanel-amd64.fpk | cut -f1)
+          FORMATTED_SIZE="~${SIZE_MB}"
+          echo "📦 计算得到的包体积为: $FORMATTED_SIZE MB"
+
           # --- 2. 同步到 FnDepot 仓库 ---
           echo "🚀 同步到 DPanel-dev/FnDepot..."
           
@@ -81,17 +87,20 @@ jobs:
           git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git ${REPO_DIR}
           
           # 直接从当前目录 cp 过去
-          cp "dpanel-amd64.fpk" "${REPO_DIR}/dpanel/dpanel.fpk"
+          cp "dpanel-amd64.fpk" "${REPO_DIR}/dpanel/dpanel_x86.fpk"
+          cp "dpanel-arm64.fpk" "${REPO_DIR}/dpanel/dpanel_arm.fpk"
+
           echo "✅ 已更新 dpanel.fpk"
 
-          # --- 修改版本号与历史记录 ---
+          # --- 修改版本号、历史记录及文件大小 ---
           JSON_FILE="${REPO_DIR}/fnpack.json"
 
           if [ -f "$JSON_FILE" ]; then
             jq --arg TAG "$TAG_NAME" \
-              --arg DESC "更新日志: https://github.com/donknap/dpanel/releases/tag/$TAG_NAME" \
-              '.dpanel.version = $TAG | .dpanel.history += { ($TAG): $DESC }' \
-              "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
+               --arg DESC "更新日志: https://github.com/donknap/dpanel/releases/tag/$TAG_NAME" \
+               --arg SIZE "$FORMATTED_SIZE" \
+               '.dpanel.version = $TAG | .dpanel.history += { ($TAG): $DESC } | .dpanel.size = $SIZE' \
+               "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
             echo "✅ 已成功解析并更新 $JSON_FILE"
           else
             echo "❌ 错误: 找不到 $JSON_FILE"
@@ -104,7 +113,8 @@ jobs:
           if git diff --staged --quiet; then
             echo "ℹ️ 内容无变化"
           else
-            git commit -m "chore: update dpanel binary to $TAG_NAME"
+            # 在 commit 信息里也顺便体现一下体积
+            git commit -m "chore: update dpanel binary to $TAG_NAME, size $FORMATTED_SIZE"
             git push origin main
             echo "✅ 成功推送到 FnDepot"
           fi
