@@ -74,8 +74,7 @@ jobs:
           # --- 计算包体积 (MB) ---
           # 获取 amd64 包的体积作为基准大小
           SIZE_MB=$(du -m dpanel-amd64.fpk | cut -f1)
-          FORMATTED_SIZE="~${SIZE_MB}"
-          echo "📦 计算得到的包体积为: $FORMATTED_SIZE MB"
+          echo "📦 计算得到的包体积为: $SIZE_MB MB"
 
           # --- 2. 同步到 FnDepot 仓库 ---
           echo "🚀 同步到 DPanel-dev/FnDepot..."
@@ -98,7 +97,7 @@ jobs:
           if [ -f "$JSON_FILE" ]; then
             jq --arg TAG "$TAG_NAME" \
                --arg DESC "更新日志: https://github.com/donknap/dpanel/releases/tag/$TAG_NAME" \
-               --arg SIZE "$FORMATTED_SIZE" \
+               --arg SIZE "$SIZE_MB" \
                '.dpanel.version = $TAG | .dpanel.history += { ($TAG): $DESC } | .dpanel.size = $SIZE' \
                "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
             echo "✅ 已成功解析并更新 $JSON_FILE"
@@ -114,7 +113,7 @@ jobs:
             echo "ℹ️ 内容无变化"
           else
             # 在 commit 信息里也顺便体现一下体积
-            git commit -m "chore: update dpanel binary to $TAG_NAME, size $FORMATTED_SIZE"
+            git commit -m "chore: update dpanel binary to $TAG_NAME, size $SIZE_MB"
             git push origin main
             echo "✅ 成功推送到 FnDepot"
           fi
