@@ -9,24 +9,43 @@ permissions:
   contents: write
 
 jobs:
-  build-and-sync: # 合并为一个任务，解决配额满的问题
+  build-and-sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Pack
-        env:
-          GITHUB_REF_NAME: ${{ github.ref_name }}
+      - name: Prepare Version Env
+        id: prep
         run: |
-          VERSION_TAG=${GITHUB_REF_NAME#v}
-          VERSION_TAG=${VERSION_TAG%.*}-${VERSION_TAG##*.}
+          # 1. 移除开头的 v
+          RAW_VER=${{ github.ref_name }}
+          
+          # 2. 统计点 (.) 的个数
+          DOT_COUNT=$(echo "$RAW_VER" | tr -cd '.' | wc -c)
+          
+          # 3. 计算 VERSION_TAG：如果是 4 段（3个点），则将最后一个点换成 -
+          if [ "$DOT_COUNT" -eq 3 ]; then
+            VERSION_TAG="${RAW_VER%.*}-${RAW_VER##*.}"
+          else
+            VERSION_TAG="$RAW_VER"
+          fi
+          
+          echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_ENV
+          echo "🚀 Computed Version: $VERSION_TAG"
 
+      - name: Pack
+        run: |
+          # 直接使用上一步存入 env 的 VERSION_TAG
+          echo "Using Version: $VERSION_TAG"
+
+          # 下载打包工具
           curl -L -o /usr/local/bin/fnpack https://github.com/donknap/dpanel/releases/download/docker-cli-v1/fnpack
           chmod +x /usr/local/bin/fnpack
 
-          # amd64
-          curl -L -o dpanel-amd64 https://github.com/donknap/dpanel/releases/download/${GITHUB_REF_NAME}/dpanel-ce-gnu-amd64 
+          # --- 1. 处理 amd64 ---
+          echo "📦 Processing amd64..."
+          curl -L -o dpanel-amd64 https://github.com/donknap/dpanel/releases/download/${{ github.ref_name }}/dpanel-ce-gnu-amd64 
           mkdir -p app/server
           cp dpanel-amd64 app/server/dpanel
 
@@ -37,10 +56,11 @@ jobs:
           fnpack build
           mv dpanel.fpk dpanel-amd64.fpk
 
-          # arm64 
-          git checkout manifest
+          # --- 2. 处理 arm64 ---
+          echo "📦 Processing arm64..."
+          git checkout manifest # 恢复 manifest 模版
           
-          curl -L -o dpanel-arm64 https://github.com/donknap/dpanel/releases/download/${GITHUB_REF_NAME}/dpanel-ce-gnu-arm64 
+          curl -L -o dpanel-arm64 https://github.com/donknap/dpanel/releases/download/${{ github.ref_name }}/dpanel-ce-gnu-arm64 
           mkdir -p app/server
           cp dpanel-arm64 app/server/dpanel
 
@@ -64,37 +84,31 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
-          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
-          # --- 1. 上传到当前仓库 Release ---
-          # 合并后文件就在当前目录，直接上传
+          # --- 1. 上传文件到当前仓库 Release ---
           echo "📤 上传文件到 donknap/dpanel Release..."
           gh release upload "$TAG_NAME" dpanel-amd64.fpk dpanel-arm64.fpk --repo donknap/dpanel --clobber
 
-          VERSION_TAG=${TAG_NAME%.*}-${TAG_NAME##*.}
-          # --- 获取 Release Body (Changelog) ---
+          # --- 2. 获取 Release Body (Changelog) ---
           echo "📄 获取 Release 更新日志..."
-          # 使用 gh 命令行工具获取 release 描述，如果获取失败则提供默认文本
           CHANGELOG_CONTENT=$(gh release view "$TAG_NAME" --repo donknap/dpanel --json body -q .body || echo "暂无更新日志")
 
-          # --- 计算包体积 (MB) ---
-          # 获取 amd64 包的体积作为基准大小
+          # --- 3. 计算包体积 (MB) ---
           SIZE_MB=$(du -m dpanel-amd64.fpk | cut -f1)
           echo "📦 计算得到的包体积为: $SIZE_MB MB"
 
-          # --- 2. 同步到 FnDepot 仓库 ---
+          # --- 4. 同步到 FnDepot 仓库 ---
           echo "🚀 同步到 DPanel-dev/FnDepot..."
-          
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           REPO_DIR="./fndepot_repo"
           git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git ${REPO_DIR}
 
-          # --- 修改版本号、大小、changelog 及 arch_diff 下载地址 ---
           JSON_FILE="${REPO_DIR}/fnpack.json"
 
           if [ -f "$JSON_FILE" ]; then
+            # 此处直接使用全局变量 $VERSION_TAG
             jq --arg TAG "$TAG_NAME" \
                --arg SIZE "$SIZE_MB" \
                --arg VERSION "$VERSION_TAG" \
@@ -104,7 +118,7 @@ jobs:
                 .dpanel.changelog = $CHANGELOG | 
                 .dpanel.arch_diff.x86.download_url = "https://github.com/donknap/dpanel/releases/download/\($TAG)/dpanel-amd64.fpk" | 
                 .dpanel.arch_diff.arm.download_url = "https://github.com/donknap/dpanel/releases/download/\($TAG)/dpanel-arm64.fpk"' \
-               "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
+                "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
             echo "✅ 已成功解析并更新 $JSON_FILE"
           else
             echo "❌ 错误: 找不到 $JSON_FILE"
@@ -117,7 +131,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "ℹ️ 内容无变化"
           else
-            # 在 commit 信息里也顺便体现一下体积
             git commit -m "chore: update dpanel binary to $TAG_NAME, size $SIZE_MB"
             git push origin main
             echo "✅ 成功推送到 FnDepot"
