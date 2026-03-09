@@ -24,7 +24,7 @@ jobs:
           # 2. 统计点 (.) 的个数
           DOT_COUNT=$(echo "$RAW_VER" | tr -cd '.' | wc -c)
           
-          # 3. 计算 VERSION_TAG：如果是 4 段（3个点），则将最后一个点换成 -
+          # 3. 计算 VERSION_TAG: 如果是 4 段(eg: v1.9.3.1)，则将最后一个点换成 - (v1.9.3-1)
           if [ "$DOT_COUNT" -eq 3 ]; then
             VERSION_TAG="${RAW_VER%.*}-${RAW_VER##*.}"
           else
@@ -40,7 +40,7 @@ jobs:
           echo "Using Version: $VERSION_TAG"
 
           # 下载打包工具
-          curl -L -o /usr/local/bin/fnpack https://github.com/donknap/dpanel/releases/download/docker-cli-v1/fnpack
+          curl -L -o /usr/local/bin/fnpack https://github.com/DPanel-dev/actions/releases/download/build-toolchain/amd64-linux-fnpack
           chmod +x /usr/local/bin/fnpack
 
           # --- 1. 处理 amd64 ---
