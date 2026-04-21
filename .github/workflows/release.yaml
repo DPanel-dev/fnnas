@@ -170,5 +170,5 @@ jobs:
       - name: Upload fpk to COS
         run: |
           ls -lh bin
-          ./coscli cp -e cos.ap-shanghai.myqcloud.com bin/ cos://we7cloud-10016060/dpanel/release/ -r --part-size 10 --routines 20 --include "*.fpk"
+          ./coscli cp -e cos.ap-shanghai.myqcloud.com bin/ cos://we7cloud-10016060/dpanel/release/ -r --part-size 10 --routines 20
           echo "✅ fpk files uploaded to COS"
