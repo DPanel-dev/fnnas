@@ -148,7 +148,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p bin
-          gh release download ${{ github.ref_name }} -D bin --repo ${{ github.repository }} '*.fpk'
+          gh release download ${{ github.ref_name }} -D bin --repo ${{ github.repository }} --pattern '*.fpk'
 
       - name: Install coscli
         run: |
