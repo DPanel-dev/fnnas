@@ -9,7 +9,9 @@ DP_STORAGE_LOCAL_PATH="${DATA_DIR}/data"
 # write the command to start your program here 
 CMD="${TRIM_APPDEST}/server/dpanel \
       -e APP_SERVER_PORT=${DP_APP_SERVER_PORT} \
-      -e STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH}"
+      -e STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH} \
+      -e APP_SERVER_SOCKET=${TRIM_APPDEST}/dpanel.sock \
+      -e DP_RUN_IN_FNNAS=1"
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}

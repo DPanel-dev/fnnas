@@ -4,10 +4,21 @@
             "title": "DPanel",
             "icon": "images/icon_{0}.png",
             "type": "url",
+            "protocol": "",
+            "gatewayPrefix": "/app/dpanel",
+            "gatewaySocket": "dpanel.sock",
+            "url": "/app/dpanel/dpanel/api/common/user/oauth/authorize?provider=fnnas&response_type=code&client_id=dpanel",
+            "allUsers": false
+        },
+        "dpanel.FnnasAuth": {
+            "title": "DPanel",
+            "icon": "images/icon_{0}.png",
+            "type": "url",
             "protocol": "http",
             "port": "${DP_APP_SERVER_PORT}",
             "url": "/dpanel/ui",
-            "allUsers": false
+            "allUsers": false,
+            "noDisplay": true
         }
     }
 }
