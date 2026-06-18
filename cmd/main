@@ -3,18 +3,83 @@
 DATA_DIR="${TRIM_DATA_SHARE_PATHS%%:*}"
 LOG_FILE="${DATA_DIR}/run.log"
 PID_FILE="${TRIM_PKGVAR}/app.pid"
+ENV_FILE="${TRIM_APPDEST}/server/.env"
 
 DP_STORAGE_LOCAL_PATH="${DATA_DIR}/data"
+APP_SERVER_SOCKET="${TRIM_APPDEST}/dpanel.sock"
 
-# write the command to start your program here 
-CMD="${TRIM_APPDEST}/server/dpanel \
-      -e APP_SERVER_PORT=${DP_APP_SERVER_PORT} \
-      -e STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH} \
-      -e APP_SERVER_SOCKET=${TRIM_APPDEST}/dpanel.sock \
-      -e DP_RUN_IN_FNNAS=1"
+DPANEL_BIN="${TRIM_APPDEST}/server/dpanel"
+DPANEL_ENV=(
+    "APP_SERVER_PORT=${DP_APP_SERVER_PORT}"
+    "STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH}"
+    "APP_SERVER_SOCKET=${APP_SERVER_SOCKET}"
+    "DP_RUN_IN_FNNAS=1"
+    "SHELL=/bin/bash"
+    "HOME=${DP_STORAGE_LOCAL_PATH}"
+    "USER=${TRIM_RUN_USERNAME}"
+    "LOGNAME=${TRIM_RUN_USERNAME}"
+    "PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+    "LANG=en_US.UTF-8"
+    "LANGUAGE=en_US:en"
+    "TERM=xterm-256color"
+    "COLORTERM=truecolor"
+)
 
 log_msg() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> ${LOG_FILE}
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}"
+}
+
+build_dpanel_args() {
+    DPANEL_ARGS=()
+    local env
+    for env in "${DPANEL_ENV[@]}"; do
+        DPANEL_ARGS+=(-e "${env}")
+    done
+}
+
+write_env_file() {
+    mkdir -p "$(dirname "${ENV_FILE}")"
+    printf "%s\n" "${DPANEL_ENV[@]}" > "${ENV_FILE}"
+}
+
+terminate_process() {
+    local pid=$1
+
+    if [ -z "${pid}" ] || ! check_process "${pid}"; then
+        return 0
+    fi
+
+    log_msg "send TERM signal to PID:${pid}..."
+    kill -TERM "${pid}" >> "${LOG_FILE}" 2>&1
+
+    local count=0
+    while check_process "${pid}" && [ $count -lt 10 ]; do
+        sleep 1
+        count=$((count + 1))
+        log_msg "waiting process terminal... (${count}s/10s)"
+    done
+
+    if check_process "${pid}"; then
+        log_msg "send KILL signal to PID:${pid}..."
+        kill -KILL "${pid}" >> "${LOG_FILE}" 2>&1
+        sleep 1
+    else
+        log_msg "process killed... "
+    fi
+}
+
+cleanup_existing_process() {
+    if command -v pgrep >/dev/null 2>&1; then
+        pids=$(pgrep -f "${TRIM_APPDEST}/server/dpanel")
+        for pid in ${pids}; do
+            [ "${pid}" = "$$" ] && continue
+            log_msg "cleanup existing dpanel process pid=${pid}"
+            terminate_process "${pid}"
+        done
+    fi
+
+    rm -f "${APP_SERVER_SOCKET}"
+    rm -f "${PID_FILE}"
 }
 
 start_process() {
@@ -44,19 +109,18 @@ start_process() {
     log_msg "[App] 存储空间: ${TRIM_APPDEST_VOL:--}"
     log_msg "[App] 共享目录: ${TRIM_DATA_SHARE_PATHS:--}"
 
-    if status; then
-        return 0
-    fi
-
     log_msg "Starting process ..."
     # run cmd to start process
     export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
-    bash -c "${CMD} server:start" >> ${LOG_FILE} 2>&1 &
+    cleanup_existing_process
+    build_dpanel_args
+    write_env_file
+    "${DPANEL_BIN}" "${DPANEL_ARGS[@]}" server:start >> "${LOG_FILE}" 2>&1 &
     # write pid to pidfile
     PID=$!
-    printf "%s" "$PID" > ${PID_FILE}
-    log_msg "CMD = ${CMD}"
-    log_msg "pid = $PID"
+    printf "%s\n" "${PID}" > "${PID_FILE}"
+    log_msg "CMD = ${DPANEL_BIN} ${DPANEL_ARGS[*]} server:start"
+    log_msg "pid = ${PID}"
 
     if [ -n "${DP_INIT_USERNAME}" ] && [ -n "${DP_INIT_PASSWORD}" ]; then
         log_msg "Init user ... ${DP_INIT_USERNAME}/${DP_INIT_PASSWORD}"
@@ -67,7 +131,7 @@ start_process() {
             sleep 1
             ((COUNT++))
         done
-        bash -c "${CMD} user:reset --username ${DP_INIT_USERNAME} --password ${DP_INIT_PASSWORD}" >> ${LOG_FILE} 2>&1 &
+        "${DPANEL_BIN}" "${DPANEL_ARGS[@]}" user:reset --username "${DP_INIT_USERNAME}" --password "${DP_INIT_PASSWORD}" >> "${LOG_FILE}" 2>&1 &
     fi
 
     return 0
@@ -87,24 +151,8 @@ stop_process() {
             return
         fi
 
-        log_msg "send TERM signal to PID:${pid}..."
-        kill -TERM ${pid} >> ${LOG_FILE} 2>&1
-
-        local count=0
-        while check_process "${pid}" && [ $count -lt 10 ]; do
-            sleep 1
-            count=$((count + 1))
-            log_msg "waiting process terminal... (${count}s/10s)"
-        done
-
-        if check_process "${pid}"; then
-            log_msg "send KILL signal to PID:${pid}..."
-            kill -KILL "${pid}"
-            sleep 1
-            rm -f "${PID_FILE}"
-        else
-            log_msg "process killed... "
-        fi
+        terminate_process "${pid}"
+        rm -f "${PID_FILE}"
     fi
 
     return 0
