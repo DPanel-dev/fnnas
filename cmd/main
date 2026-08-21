@@ -29,6 +29,16 @@ log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}"
 }
 
+mask_password() {
+    local value="$1"
+    local length=${#value}
+    if [ "${length}" -le 2 ]; then
+        printf "***"
+        return
+    fi
+    printf "%s***%s" "${value:0:1}" "${value: -1}"
+}
+
 build_dpanel_args() {
     DPANEL_ARGS=()
     local env
@@ -123,7 +133,7 @@ start_process() {
     log_msg "pid = ${PID}"
 
     if [ -n "${DP_INIT_USERNAME}" ] && [ -n "${DP_INIT_PASSWORD}" ]; then
-        log_msg "Init user ... ${DP_INIT_USERNAME}/${DP_INIT_PASSWORD}"
+        log_msg "Init user ... ${DP_INIT_USERNAME}/$(mask_password "${DP_INIT_PASSWORD}")"
         # 最多等待 30 秒，查找是否有关键字
         MAX_RETRIES=30
         COUNT=0
