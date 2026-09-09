@@ -10,11 +10,17 @@ APP_SERVER_SOCKET="${TRIM_APPDEST}/dpanel.sock"
 
 DPANEL_BIN="${TRIM_APPDEST}/server/dpanel"
 DPANEL_ENV=(
+    "APP_NAME=dpanel"
+    "APP_SERVER_HOST=0.0.0.0"
     "APP_SERVER_PORT=${DP_APP_SERVER_PORT}"
+    "APP_ENV=lite"
+    "APP_FAMILY=ce"
+    "APP_DEV=false"
     "STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH}"
     "APP_SERVER_SOCKET=${APP_SERVER_SOCKET}"
     "DP_RUN_IN_FNNAS=1"
     "DP_SYSTEM_BASEURL=/app/dpanel"
+    "INSTALLER_BASE_IMAGE=debian"
     "SHELL=/bin/bash"
     "HOME=${DP_STORAGE_LOCAL_PATH}"
     "USER=${TRIM_RUN_USERNAME}"
@@ -51,6 +57,7 @@ build_dpanel_args() {
 write_env_file() {
     mkdir -p "$(dirname "${ENV_FILE}")"
     printf "%s\n" "${DPANEL_ENV[@]}" > "${ENV_FILE}"
+    chmod 600 "${ENV_FILE}"
 }
 
 terminate_process() {
