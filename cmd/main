@@ -5,22 +5,31 @@ LOG_FILE="${DATA_DIR}/run.log"
 PID_FILE="${TRIM_PKGVAR}/app.pid"
 ENV_FILE="${TRIM_APPDEST}/server/.env"
 
+if [ -r "${ENV_FILE}" ]; then
+    set -a
+    source "${ENV_FILE}"
+    set +a
+fi
+
 DP_STORAGE_LOCAL_PATH="${DATA_DIR}/data"
 APP_SERVER_SOCKET="${TRIM_APPDEST}/dpanel.sock"
 
 DPANEL_BIN="${TRIM_APPDEST}/server/dpanel"
 DPANEL_ENV=(
-    "APP_NAME=dpanel"
+    "APP_NAME=${APP_NAME:-dpanel}"
     "APP_SERVER_HOST=0.0.0.0"
     "APP_SERVER_PORT=${DP_APP_SERVER_PORT}"
-    "APP_ENV=lite"
-    "APP_FAMILY=ce"
-    "APP_DEV=false"
+    "APP_ENV=${APP_ENV:-lite}"
+    "APP_FAMILY=${APP_FAMILY:-ce}"
+    "APP_DEV=${APP_DEV:-false}"
     "STORAGE_LOCAL_PATH=${DP_STORAGE_LOCAL_PATH}"
     "APP_SERVER_SOCKET=${APP_SERVER_SOCKET}"
     "DP_RUN_IN_FNNAS=1"
-    "DP_SYSTEM_BASEURL=/app/dpanel"
-    "INSTALLER_BASE_IMAGE=debian"
+    "DP_SYSTEM_BASEURL=${DP_SYSTEM_BASEURL:-/app/dpanel}"
+    "DP_LOG_CONSOLE_LEVEL=${DP_LOG_CONSOLE_LEVEL:-info}"
+    "DP_LOG_FILE_LEVEL=${DP_LOG_FILE_LEVEL:-info}"
+    "INSTALLER_RELEASE=${INSTALLER_RELEASE:-}"
+    "INSTALLER_BASE_IMAGE=${INSTALLER_BASE_IMAGE:-debian}"
     "SHELL=/bin/bash"
     "HOME=${DP_STORAGE_LOCAL_PATH}"
     "USER=${TRIM_RUN_USERNAME}"
@@ -31,6 +40,19 @@ DPANEL_ENV=(
     "TERM=xterm-256color"
     "COLORTERM=truecolor"
 )
+
+if [ -r "${ENV_FILE}" ]; then
+    while IFS='=' read -r key _; do
+        case "${key}" in
+        ''|'#'*|SCRIPT_*|APP_NAME|APP_SERVER_HOST|APP_SERVER_PORT|APP_ENV|APP_FAMILY|APP_DEV|STORAGE_LOCAL_PATH|APP_SERVER_SOCKET|DP_RUN_IN_FNNAS|DP_SYSTEM_BASEURL|DP_LOG_CONSOLE_LEVEL|DP_LOG_FILE_LEVEL|INSTALLER_RELEASE|INSTALLER_BASE_IMAGE|SHELL|HOME|USER|LOGNAME|PATH|LANG|LANGUAGE|TERM|COLORTERM)
+            continue
+            ;;
+        esac
+        if [[ "${key}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            DPANEL_ENV+=("${key}=${!key}")
+        fi
+    done < "${ENV_FILE}"
+fi
 
 log_msg() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}"
