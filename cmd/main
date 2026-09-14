@@ -101,6 +101,12 @@ cleanup_existing_process() {
 }
 
 start_process() {
+    # 安装向导参数只在本脚本中用于初始化用户。DPanel 会在 DEBUG
+    # 日志中输出完整子进程环境，因此不能让它们继续被子进程继承。
+    local init_username="${DP_INIT_USERNAME:-}"
+    local init_password="${DP_INIT_PASSWORD:-}"
+    unset DP_INIT_USERNAME DP_INIT_PASSWORD
+
     log_msg "============== Debug Info =============="
     log_msg "[Sys] ID: ${TRIM_SYS_MACHINE_ID:--}"
     log_msg "[Sys] 用户: ${TRIM_RUN_USERNAME:--}:${TRIM_RUN_GROUPNAME:--} (${TRIM_RUN_UID:--}:${TRIM_RUN_GID:--})"
@@ -140,8 +146,8 @@ start_process() {
     log_msg "CMD = ${DPANEL_BIN} ${DPANEL_ARGS[*]} server:start"
     log_msg "pid = ${PID}"
 
-    if [ -n "${DP_INIT_USERNAME}" ] && [ -n "${DP_INIT_PASSWORD}" ]; then
-        log_msg "Init user ... ${DP_INIT_USERNAME}/$(mask_password "${DP_INIT_PASSWORD}")"
+    if [ -n "${init_username}" ] && [ -n "${init_password}" ]; then
+        log_msg "Init user ... ${init_username}/$(mask_password "${init_password}")"
         # 最多等待 30 秒，查找是否有关键字
         MAX_RETRIES=30
         COUNT=0
@@ -149,7 +155,7 @@ start_process() {
             sleep 1
             ((COUNT++))
         done
-        "${DPANEL_BIN}" "${DPANEL_ARGS[@]}" user:reset --username "${DP_INIT_USERNAME}" --password "${DP_INIT_PASSWORD}" >> "${LOG_FILE}" 2>&1 &
+        "${DPANEL_BIN}" "${DPANEL_ARGS[@]}" user:reset --username "${init_username}" --password "${init_password}" >> "${LOG_FILE}" 2>&1 &
     fi
 
     return 0
