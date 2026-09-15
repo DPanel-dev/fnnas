@@ -177,7 +177,7 @@ start_process() {
             sleep 1
             ((COUNT++))
         done
-        "${DPANEL_BIN}" "${DPANEL_ARGS[@]}" user:reset --username "${init_username}" --password "${init_password}" >> "${LOG_FILE}" 2>&1 &
+        "${DPANEL_BIN}" "${DPANEL_ARGS[@]}" user:reset --username "${init_username}" --password "${init_password}" --quiet >> "${LOG_FILE}" 2>&1 &
     fi
 
     return 0
