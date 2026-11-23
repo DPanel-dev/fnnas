@@ -42,6 +42,12 @@ jobs:
           # 下载打包工具
           curl -L -o /usr/local/bin/fnpack https://github.com/DPanel-dev/actions/releases/download/build-toolchain/amd64-linux-fnpack
           chmod +x /usr/local/bin/fnpack
+          {
+            echo '### fnpack 版本'
+            echo '```text'
+            fnpack 2>&1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
           # --- 1. 处理 amd64 ---
           echo "📦 Processing amd64..."
@@ -49,11 +55,11 @@ jobs:
           mkdir -p app/server
           cp dpanel-amd64 app/server/dpanel
 
-          sed -i "s/#version/$VERSION_TAG/g" manifest
+          sed -i "s/#version/${VERSION_TAG#v}/g" manifest
           sed -i "s/#os_min_version/1.1.31/g" manifest
           sed -i "s/#platform/x86/g" manifest
 
-          fnpack build
+          fnpack build --nosign
           mv dpanel.fpk dpanel-amd64.fpk
 
           # --- 2. 处理 arm64 ---
@@ -64,11 +70,11 @@ jobs:
           mkdir -p app/server
           cp dpanel-arm64 app/server/dpanel
 
-          sed -i "s/#version/$VERSION_TAG/g" manifest
+          sed -i "s/#version/${VERSION_TAG#v}/g" manifest
           sed -i "s/#os_min_version/1.1.31/g" manifest
           sed -i "s/#platform/arm/g" manifest
 
-          fnpack build
+          fnpack build --nosign
           mv dpanel.fpk dpanel-arm64.fpk
 
       - name: Upload Release
