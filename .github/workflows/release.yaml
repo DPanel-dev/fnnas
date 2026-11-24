@@ -141,6 +141,8 @@ jobs:
   # 上传 fpk 产物到 COS
   # ==============================
   upload-cos:
+    # 临时停用 COS 上传；恢复时删除下面的 if。
+    if: ${{ false }}
     needs: [build-and-sync]
     runs-on: ubuntu-latest
     steps:
