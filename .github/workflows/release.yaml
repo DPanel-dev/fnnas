@@ -11,6 +11,8 @@ permissions:
 jobs:
   build-and-sync:
     runs-on: ubuntu-latest
+    env:
+      OS_MIN_VERSION: 1.1.31
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,7 +58,7 @@ jobs:
           cp dpanel-amd64 app/server/dpanel
 
           sed -i "s/#version/${VERSION_TAG#v}/g" manifest
-          sed -i "s/#os_min_version/1.1.31/g" manifest
+          sed -i "s/#os_min_version/${OS_MIN_VERSION}/g" manifest
           sed -i "s/#platform/x86/g" manifest
 
           fnpack build --nosign
@@ -71,7 +73,7 @@ jobs:
           cp dpanel-arm64 app/server/dpanel
 
           sed -i "s/#version/${VERSION_TAG#v}/g" manifest
-          sed -i "s/#os_min_version/1.1.31/g" manifest
+          sed -i "s/#os_min_version/${OS_MIN_VERSION}/g" manifest
           sed -i "s/#platform/arm/g" manifest
 
           fnpack build --nosign
@@ -95,49 +97,42 @@ jobs:
           echo "📤 上传文件到 donknap/dpanel Release..."
           gh release upload "$TAG_NAME" dpanel-amd64.fpk dpanel-arm64.fpk --repo donknap/dpanel --clobber
 
-          # --- 2. 获取 Release Body (Changelog) ---
-          echo "📄 获取 Release 更新日志..."
-          CHANGELOG_CONTENT=$(gh release view "$TAG_NAME" --repo donknap/dpanel --json body -q .body || echo "暂无更新日志")
+          # 以实际发布的 FPK 为准，读取每个架构的下载地址、字节数和 SHA-256。
+          RELEASE_JSON="$RUNNER_TEMP/dpanel-release.json"
+          gh api "repos/donknap/dpanel/releases/tags/$TAG_NAME" > "$RELEASE_JSON"
 
-          # --- 3. 计算包体积 (MB) ---
-          SIZE_MB=$(du -m dpanel-amd64.fpk | cut -f1)
-          echo "📦 计算得到的包体积为: $SIZE_MB MB"
-
-          # --- 4. 同步到 FnDepot 仓库 ---
-          echo "🚀 同步到 DPanel-dev/FnDepot..."
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
           REPO_DIR="./fndepot_repo"
-          git clone https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git ${REPO_DIR}
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/DPanel-dev/FnDepot.git" "$REPO_DIR"
+          JSON_FILE="$REPO_DIR/fnpack.json"
 
-          JSON_FILE="${REPO_DIR}/fnpack.json"
-
-          if [ -f "$JSON_FILE" ]; then
-            # 此处直接使用全局变量 $VERSION_TAG
-            jq --arg TAG "$TAG_NAME" \
-               --arg SIZE "$SIZE_MB" \
-               --arg VERSION "$VERSION_TAG" \
-               --arg CHANGELOG "$CHANGELOG_CONTENT" \
-               '.dpanel.version = $VERSION | 
-                .dpanel.size = $SIZE | 
-                .dpanel.changelog = $CHANGELOG | 
-                .dpanel.arch_diff.x86.download_url = "https://github.com/donknap/dpanel/releases/download/\($TAG)/dpanel-amd64.fpk" | 
-                .dpanel.arch_diff.arm.download_url = "https://github.com/donknap/dpanel/releases/download/\($TAG)/dpanel-arm64.fpk"' \
-                "$JSON_FILE" > "$JSON_FILE.tmp" && mv "$JSON_FILE.tmp" "$JSON_FILE"
-            echo "✅ 已成功解析并更新 $JSON_FILE"
-          else
-            echo "❌ 错误: 找不到 $JSON_FILE"
-            exit 1
-          fi
+          jq -e --slurpfile release "$RELEASE_JSON" \
+            --arg version "${VERSION_TAG#v}" --arg os_min "$OS_MIN_VERSION" '
+            def asset($name):
+              first($release[0].assets[] | select(.name == $name)) // error("Missing asset: " + $name)
+              | if .state == "uploaded" and .size > 0 and (.digest // "" | test("^sha256:[0-9a-f]{64}$"))
+                then . else error("Incomplete asset: " + $name) end;
+            def package: {download_url: .browser_download_url, size, sha256: (.digest | ltrimstr("sha256:"))};
+            if .schema_version != "2" or (.apps.dpanel.releases | type) != "object"
+            then error("Expected a FnDepot v2 index with DPanel releases") else . end
+            | asset("dpanel-amd64.fpk") as $x86
+            | asset("dpanel-arm64.fpk") as $arm
+            | .apps.dpanel.releases[$version] = {
+                changelog: ($release[0].body // ""),
+                updated_at: ([$x86.updated_at, $arm.updated_at] | max),
+                os_min_version: $os_min,
+                packages: {x86: ($x86 | package), arm: ($arm | package)}
+              }' "$JSON_FILE" > "$JSON_FILE.tmp"
+          mv "$JSON_FILE.tmp" "$JSON_FILE"
 
           # 提交推送
-          cd $REPO_DIR
-          git add .
+          cd "$REPO_DIR"
+          git add fnpack.json
           if git diff --staged --quiet; then
             echo "ℹ️ 内容无变化"
           else
-            git commit -m "chore: update dpanel binary to $TAG_NAME, size $SIZE_MB"
+            git commit -m "chore: update dpanel binary to $TAG_NAME"
             git push origin main
             echo "✅ 成功推送到 FnDepot"
           fi
